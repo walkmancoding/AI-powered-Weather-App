@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App with Chatbot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #6dd5fa, #2980b9);
+            padding: 20px;
+            position: relative;
+        }
+
+        .weather-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .weather-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .city {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .temperature {
+            font-size: 3em;
+            color: #2c3e50;
+            margin: 10px 0;
+        }
+
+        .weather-description {
+            font-size: 1.2em;
+            color: #555;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .weather-emoji {
+            font-size: 1.5em;
+        }
+
+        .details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .detail-item {
+            background: #f1f1f1;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 1em;
+            color: #333;
+        }
+
+        .error {
+            color: #e74c3c;
+            font-size: 1.2em;
+            margin-top: 20px;
+        }
+
+        .loading {
+            font-size: 1.2em;
+            color: #555;
+        }
+
+        /* Chat Button Styles */
+        .chat-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #2c3e50;
+            color: white;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            transition: background 0.3s, transform 0.3s;
+        }
+
+        .chat-button:hover {
+            background: #34495e;
+            transform: scale(1.1);
+        }
+
+        /* Chatbot Window Styles */
+        .chatbot-container {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 350px;
+            max-height: 500px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .chatbot-header {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            font-size: 1.2em;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chatbot-header .close-chat {
+            cursor: pointer;
+            font-size: 1.2em;
+        }
+
+        .chatbot-body {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background: #f9f9f9;
+        }
+
+        .chat-message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .chat-message.user {
+            justify-content: flex-end;
+        }
+
+        .chat-message.ai {
+            justify-content: flex-start;
+        }
+
+        .chat-message .message-content {
+            max-width: 70%;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.9em;
+        }
+
+        .chat-message.user .message-content {
+            background: #6dd5fa;
+            color: #333;
+        }
+
+        .chat-message.ai .message-content {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        /* Typing Indicator Styles */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .typing-indicator .message-content {
+            background: #e0e0e0;
+            padding: 10px;
+            border-radius: 10px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .typing-indicator .dot {
+            width: 8px;
+            height: 8px;
+            background: #333;
+            border-radius: 50%;
+            animation: blink 1.4s infinite both;
+        }
+
+        .typing-indicator .dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator .dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes blink {
+            0% {
+                opacity: 0.2;
+            }
+            20% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0.2;
+            }
+        }
+
+        .chatbot-input {
+            display: flex;
+            padding: 15px;
+            background: #fff;
+            border-top: 1px solid #ddd;
+        }
+
+        .chatbot-input input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            outline: none;
+            font-size: 0.9em;
+        }
+
+        .chatbot-input button {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 15px;
+            margin-left: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .chatbot-input button:hover {
+            background: #34495e;
+        }
+
+        @media (max-width: 600px) {
+            .weather-card {
+                padding: 15px;
+                max-width: 90%;
+            }
+
+            .city {
+                font-size: 1.5em;
+            }
+
+            .temperature {
+                font-size: 2.5em;
+            }
+
+            .details {
+                grid-template-columns: 1fr;
+            }
+
+            .chatbot-container {
+                width: 90%;
+                max-height: 70vh;
+                bottom: 70px;
+                right: 10px;
+            }
+
+            .chat-button {
+                width: 50px;
+                height: 50px;
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="weather-card" id="weatherCard">
+        <div id="loading" class="loading">Loading...</div>
+        <div id="weatherContent" style="display: none;">
+            <div class="city" id="city">City, Country</div>
+            <div class="temperature" id="temperature">0°C</div>
+            <div class="weather-description" id="description">
+                <span id="weatherText">Clear</span>
+                <span class="weather-emoji" id="weatherEmoji">☀️</span>
+            </div>
+            <div class="details">
+                <div class="detail-item">Humidity: <span id="humidity">0%</span></div>
+                <div class="detail-item">Wind: <span id="wind">0 km/h</span></div>
+                <div class="detail-item">Pressure: <span id="pressure">0 hPa</span></div>
+                <div class="detail-item">Feels Like: <span id="feelsLike">0°C</span></div>
+            </div>
+        </div>
+        <div id="error" class="error" style="display: none;"></div>
+    </div>
+
+    <!-- Chat Button -->
+    <div class="chat-button" id="chatButton" title="Open Chatbot">💬</div>
+
+    <!-- Chatbot Container -->
+    <div class="chatbot-container" id="chatbotContainer">
+        <div class="chatbot-header">
+            Weather Assistant
+            <span class="close-chat" id="closeChat">×</span>
+        </div>
+        <div class="chatbot-body" id="chatBody">
+            <!-- Chat messages will be appended here -->
+        </div>
+        <div class="chatbot-input">
+            <input type="text" id="chatInput" placeholder="Type a message...">
+            <button id="sendMessage">Send</button>
+        </div>
+    </div>
+
+    <script>
+        // Weather App Logic
+        const apiKey = 'a55237a70cca426f4b81b6ae9749cdf8'; // OpenWeatherMap API key
+        const geminiApiKey = 'AIzaSyBschfYr3zUW46awh7RGoSANbUjHqwrC68'; // Replace with your Gemini API key
+        const weatherContent = document.getElementById('weatherContent');
+        const loading = document.getElementById('loading');
+        const error = document.getElementById('error');
+
+        const weatherEmojis = {
+            'clear': '☀️',
+            'clouds': '☁️',
+            'rain': '🌧️',
+            'drizzle': '🌦️',
+            'thunderstorm': '⛈️',
+            'snow': '❄️',
+            'mist': '🌫️',
+            'fog': '🌫️',
+            'haze': '🌫️'
+        };
+
+        function capitalizeFirstLetter(string) {
+            return string.charAt(0).toUpperCase() + string.slice(1);
+        }
+
+        async function fetchWeather(lat, lon) {
+            try {
+                const response = await fetch(
+                    `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`
+                );
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const data = await response.json();
+
+                document.getElementById('city').textContent = `${data.name || 'Unknown'}, ${data.sys.country || ''}`;
+                document.getElementById('temperature').textContent = `${Math.round(data.main.temp)}°C`;
+                const weatherMain = (data.weather[0].main || '').toLowerCase();
+                const weatherDescription = capitalizeFirstLetter(data.weather[0].description || 'unknown');
+                document.getElementById('weatherText').textContent = weatherDescription;
+                document.getElementById('weatherEmoji').textContent = weatherEmojis[weatherMain] || '🌍';
+                document.getElementById('humidity').textContent = `${data.main.humidity || 0}%`;
+                document.getElementById('wind').textContent = `${((data.wind.speed || 0) * 3.6).toFixed(1)} km/h`;
+                document.getElementById('pressure').textContent = `${data.main.pressure || 0} hPa`;
+                document.getElementById('feelsLike').textContent = `${Math.round(data.main.feels_like || 0)}°C`;
+
+                weatherContent.style.display = 'block';
+                loading.style.display = 'none';
+                error.style.display = 'none';
+            } catch (err) {
+                console.error('Weather API Error:', err);
+                error.textContent = err.message.includes('401') 
+                    ? 'Invalid OpenWeatherMap API key. Please check your key.'
+                    : 'Error fetching weather data. Please try again later.';
+                error.style.display = 'block';
+                loading.style.display = 'none';
+                weatherContent.style.display = 'none';
+            }
+        }
+
+        function fetchDefaultWeather() {
+            fetchWeather(51.5074, -0.1278); // London coordinates
+        }
+
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const { latitude, longitude } = position.coords;
+                        fetchWeather(latitude, longitude);
+                    },
+                    (err) => {
+                        console.error('Geolocation error:', err);
+                        error.textContent = 'Location access denied. Using default location (London).';
+                        error.style.display = 'block';
+                        loading.style.display = 'none';
+                        fetchDefaultWeather();
+                    },
+                    { timeout: 10000 }
+                );
+            } else {
+                error.textContent = 'Geolocation is not supported by this browser. Using default location (London).';
+                error.style.display = 'block';
+                loading.style.display = 'none';
+                fetchDefaultWeather();
+            }
+        }
+
+        if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
+            error.textContent = 'Please provide a valid OpenWeatherMap API key.';
+            error.style.display = 'block';
+            loading.style.display = 'none';
+        } else {
+            getLocation();
+        }
+
+        // Chatbot Logic
+        const chatButton = document.getElementById('chatButton');
+        const chatbotContainer = document.getElementById('chatbotContainer');
+        const closeChat = document.getElementById('closeChat');
+        const chatBody = document.getElementById('chatBody');
+        const chatInput = document.getElementById('chatInput');
+        const sendMessage = document.getElementById('sendMessage');
+
+        // Toggle chatbot visibility
+        chatButton.addEventListener('click', () => {
+            chatbotContainer.style.display = chatbotContainer.style.display === 'none' ? 'flex' : 'none';
+        });
+
+        closeChat.addEventListener('click', () => {
+            chatbotContainer.style.display = 'none';
+        });
+
+        // Show typing indicator
+        function showTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'typing-indicator';
+            typingDiv.innerHTML = `
+                <div class="message-content">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+            `;
+            chatBody.appendChild(typingDiv);
+            chatBody.scrollTop = chatBody.scrollHeight;
+            return typingDiv;
+        }
+
+        // Remove typing indicator
+        function removeTypingIndicator(typingDiv) {
+            if (typingDiv && typingDiv.parentNode) {
+                typingDiv.parentNode.removeChild(typingDiv);
+            }
+        }
+
+        // Fetch AI response from Gemini API
+        async function fetchAIResponse(message) {
+            if (!geminiApiKey || geminiApiKey === 'YOUR_GEMINI_API_KEY') {
+                console.error('Gemini API key is missing or invalid.');
+                return 'Error: Please provide a valid Gemini API key.';
+            }
+
+            try {
+                console.log('Sending Gemini API request for message:', message);
+                const response = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{
+                                    text: message
+                                }]
+                            }]
+                        })
+                    }
+                );
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Gemini API error! Status: ${response.status}, Details: ${errorText}`);
+                }
+
+                const data = await response.json();
+                console.log('Gemini API response:', data);
+
+                if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0].text) {
+                    throw new Error('Invalid response structure from Gemini API.');
+                }
+
+                return data.candidates[0].content.parts[0].text;
+            } catch (err) {
+                console.error('Gemini API Error:', err.message);
+                return 'Sorry, I couldn’t fetch a response. Please try again later.';
+            }
+        }
+
+        // Send message and get AI response
+        async function sendChatMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            const userMessage = document.createElement('div');
+            userMessage.className = 'chat-message user';
+            userMessage.innerHTML = `<div class="message-content">${message}</div>`;
+            chatBody.appendChild(userMessage);
+
+            // Show typing indicator
+            const typingDiv = showTypingIndicator();
+
+            // Get AI response
+            const aiResponse = await fetchAIResponse(message);
+
+            // Remove typing indicator
+            removeTypingIndicator(typingDiv);
+
+            // Add AI response
+            const aiMessage = document.createElement('div');
+            aiMessage.className = 'chat-message ai';
+            aiMessage.innerHTML = `<div class="message-content">${aiResponse}</div>`;
+            chatBody.appendChild(aiMessage);
+
+            // Clear input and scroll to bottom
+            chatInput.value = '';
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        sendMessage.addEventListener('click', sendChatMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendChatMessage();
+        });
+    </script>
+</body>
+</html>
